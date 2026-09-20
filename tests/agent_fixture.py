@@ -43,8 +43,11 @@ class ScriptedModel(BaseChatModel):
             name, args = "history_undo", {"scene_version": payload(replies[-1])["data"]["scene_version"]}
         elif count == 6:
             name, args = "scene_get_tree", {}
+        elif count == 7:
+            name, args = "project_get_sync_status", {}
         else:
-            assert not any(e["name"] == "AI_Player" for e in payload(replies[-1])["data"]["entities"])
+            assert not any(e["name"] == "AI_Player" for e in payload(replies[6])["data"]["entities"])
+            assert 'currentContentPersisted' in payload(replies[7])["data"]
             return ChatResult(generations=[ChatGeneration(message=AIMessage(content="已创建、读取验证并撤销 AI_Player。"))])
         return ChatResult(generations=[ChatGeneration(message=AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": f"test-{count}"}]))])
 

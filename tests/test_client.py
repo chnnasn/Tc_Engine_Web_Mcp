@@ -42,6 +42,6 @@ async def test_revocation_is_not_reported_as_success():
 
 
 def test_capability_subset_and_installed_skill():
-    assert len(BY_NAME) == 15
+    assert len(BY_NAME) == 16
     assert not {"scene_save", "console_get_entries", "editor_step"} & BY_NAME.keys()
     assert "Query `component_get_schema`" in skill_instructions()

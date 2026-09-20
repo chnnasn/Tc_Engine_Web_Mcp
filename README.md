@@ -10,7 +10,7 @@ LangChain Agent + TomCat Web MCP 服务。复用 `TomCat_Engine_Skills` 固定�
              → 浏览器 HTTP 长轮询 → MessageChannel → tomcat.web.v1 → WASM
 ```
 
-这是在线编辑 MVP：浏览器必须保持打开；每次提交是独立 Agent 请求，没有跨请求聊天记忆。模型只拿到工具参数和结果，不接收 Cookie、服务密钥或编辑器委托令牌。场景修改经过引擎事务，完成后仍需用户点击现有保存按钮。
+这是在线编辑 MVP：浏览器必须保持打开；每次提交是独立 Agent 请求，没有跨请求聊天记忆。模型只拿到工具参数和结果，不接收 Cookie、服务密钥或编辑器委托令牌。场景修改经过引擎事务，Web 任务流程在开始前、正常结束后自动保存完整项目检查点。
 
 ## 启动
 
@@ -50,7 +50,7 @@ dotnet run --project TomCat.Api --no-launch-profile -- --urls http://127.0.0.1:5
 
 ## 兼容矩阵
 
-共享 Skills 定义 18 个工具，本服务开放其中 15 个：
+共享 Skills 定义 18 个工具，本服务开放其中 15 个，并新增 Web 专用同步查询工具，共 16 个：
 
 | 工具 | Web 映射 / 限制 |
 | --- | --- |
@@ -58,6 +58,7 @@ dotnet run --project TomCat.Api --no-launch-profile -- --urls http://127.0.0.1:5
 | scene_get_tree | scene.snapshot 的分页实体列表 |
 | entity_get | scene.snapshot 中的实体及组件属性 |
 | component_get_schema | 当前引擎返回的 schemas |
+| project_get_sync_status | 区分当前内容未同步、冲突、同步受阻、Redis 已同步待落库和当前内容已落库；保存过程中返回 SAVE_IN_PROGRESS，可稍后重新查询 |
 | entity_create | 随机非零 uint64 字符串 ID，检查当前场景重名 ID，scene.transact |
 | entity_delete / entity_reparent | scene.transact；引擎校验结构 |
 | component_add / component_remove / component_set | scene.transact；引擎校验组件和属性 |
@@ -70,6 +71,14 @@ dotnet run --project TomCat.Api --no-launch-profile -- --urls http://127.0.0.1:5
 工具名称和输入字段复用；返回数据是 Web 结构，例如 `entity.id`、`schemas`、`scene_version`。`scene_version` 是不可解析的字符串，包含场景 Handle 与 revision；它不同于云端修订 ETag，也不是桌面协议版本。Skills 仅加载发现与编辑验证章节，并用 Web 约束覆盖桌面路径、Save As 和 Console 指令。其他 7 个 UI/源码 Skill 暂未加入 Agent，因为尚无相应执行能力。
 
 ## 会话、授权与重试
+
+### 任务检查点与同步状态
+
+Web 界面在启动 Agent 前、正常响应后分别捕获完整项目，走已有条件保存接口 `/revisions` 立即落库；Redis 模式也不等待周期落库。每个检查点的修订清单包含 `aiCheckpoint: { runId, phase: "start" | "end", sceneVersion }`，历史列表显示 AI 开始/结束和任务编号，可沿用历史恢复功能创建独立副本。它是项目恢复点，不是 LangGraph 执行状态或可断点续跑的任务。
+
+开始检查点失败或保存期间场景变化时不启动 Agent。Agent 失败、取消、页面退出时不会自动回滚，也不伪造结束检查点。正常响应后的检查点失败会明确提示“AI 已执行，但结束检查点未确认保存”；开始检查点保留。运行预览必须先停止，才能保存 authoring 场景。检查点可能包含同时发生的人工编辑，不承诺只包含 AI 修改。
+
+`project_get_sync_status` 通过浏览器比较真实完整项目内容与最近成功同步快照，再检查云端 ETag 和 persisted。`cloudPersisted` 只描述云端版本，只有 `currentContentPersisted` 才确认当前编辑内容已落库。查询期间发生修改会返回未确认状态，不会用旧云端版本冒充当前内容。刚恢复但本次会话尚未校验同步内容时保守报告未确认。
 
 - 浏览器用已有 Cookie 创建会话，后端核对云端项目所有权。模型不能指定用户或切换项目。
 - 每次 Agent 请求创建独立会话；浏览器长轮询每次最长 20 秒，凭证只在后端与 Python 间传递。
