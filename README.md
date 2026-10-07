@@ -99,7 +99,7 @@ Python 默认仅监听 127.0.0.1。分容器部署可设置 `TOMCAT_HOST=0.0.0.0
 
 ### Railway 部署
 
-仓库包含多阶段 `Dockerfile` 和 `railway.json`：使用 Python 3.12、锁定的 uv 与依赖，以非 root 用户运行，`/health` 为健康检查，保持单副本。此服务不存储项目文件，不需要额外 Volume。
+仓库包含多阶段 `Dockerfile` 和 `railway.json`：使用 Python 3.12、锁定的 uv 与依赖，以非 root 用户运行，`/health` 为健康检查，保持单副本。发布前执行 `python -m tomcat_web_mcp.deployment_check`，验证到后端的私网 HTTP、MCP 健康和凭证拒绝行为；此检查不调用模型或写入项目。此服务不存储项目文件，不需要额外 Volume。
 
 在现有后端所属的 Railway 项目、production 环境中创建独立服务并关联本仓库 main 分支。配置：
 
