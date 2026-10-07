@@ -97,6 +97,26 @@ Python 默认仅监听 127.0.0.1。分容器部署可设置 `TOMCAT_HOST=0.0.0.0
 
 ## 验证
 
+### Railway 部署
+
+仓库包含多阶段 `Dockerfile` 和 `railway.json`：使用 Python 3.12、锁定的 uv 与依赖，以非 root 用户运行，`/health` 为健康检查，保持单副本。此服务不存储项目文件，不需要额外 Volume。
+
+在现有后端所属的 Railway 项目、production 环境中创建独立服务并关联本仓库 main 分支。配置：
+
+| 变量 | 值 |
+| --- | --- |
+| `PORT` | `8080` |
+| `TOMCAT_HOST` | `0.0.0.0`（当前 Railway 环境支持私网 IPv4） |
+| `TOMCAT_BACKEND_URL` | `http://tcenginewebbackend.railway.internal:8080` |
+| `TOMCAT_MCP_URL` | `http://127.0.0.1:8080/mcp/` |
+| `TOMCAT_AGENT_SECRET` | Railway 变量中生成并保存的至少 32 字符随机密钥 |
+
+当前部署仅启用私网 MCP；不生成公网域名。内部地址为 `http://tcenginewebmcp.railway.internal:8080/mcp/`，调用仍须携带后端签发的编辑器会话 Bearer 凭证，服务密钥不能代替会话凭证。
+
+未设置模型时 `/health` 返回 `modelConfigured: false`，MCP 工具仍然存在，但 AI Agent 请求返回明确的 503。后续启用网页 AI 助手时再配置 `TOMCAT_MODEL`、`TOMCAT_MODEL_API_KEY`、可选的 `TOMCAT_MODEL_BASE_URL`，并在后端设置 `Agent__Url=http://tcenginewebmcp.railway.internal:8080`、`Agent__Secret` 为相同服务密钥。密钥不要写入仓库。
+
+网页 AI 请求最长 180 秒，而 Netlify 代理重写限制为 26 秒。正式启用前应先将网页 Agent 调用改为异步任务提交及状态查询，避免长请求中断。当前部署不启用模型或更改后端 Agent 配置。
+
 ```powershell
 uv run --locked --extra test pytest -q
 # 后端目录
