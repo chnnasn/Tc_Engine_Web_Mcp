@@ -34,7 +34,7 @@ class WebEditorClient:
         request_id = retry_id or uuid.uuid4().hex
         try:
             response = await self.http.post(f"{self.backend_url}/internal/editor-session/call", headers=self.headers,
-                json={"requestId": request_id, "name": name, "arguments": args, "isRetry": retry_id is not None}, timeout=35)
+                json={"requestId": request_id, "name": name, "arguments": args, "isRetry": retry_id is not None}, timeout=125 if name in ("script_compile", "editor_play") else 35)
             if response.status_code == 401:
                 return failure("SESSION_MISMATCH", "Editor lease expired or was revoked. Reconnect and inspect the scene.", request_id)
             response.raise_for_status()

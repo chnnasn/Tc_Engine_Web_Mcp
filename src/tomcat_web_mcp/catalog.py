@@ -19,4 +19,27 @@ for tool in WEB_TOOLS:
 WEB_TOOLS.append({"name": "project_get_sync_status", "description": "Read whether the CURRENT editor content is synced and persisted. cloudPersisted alone does not mean current edits are saved. Status may be local_changes, conflict, blocked, synced_pending_persistence or persisted. Read again after SAVE_IN_PROGRESS.",
     "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": False},
     "annotations": {"readOnlyHint": True, "openWorldHint": False, "destructiveHint": False}})
+def script_tool(name, description, properties=None, required=None, writes=False):
+    fields = dict(properties or {})
+    if writes:
+        fields.update({"scene_version": {"type": "string", "description": "Latest inspected scene_version."},
+                       "source_version": {"type": "string", "description": "Latest source_version from script_list/read/write/compile. Never invent."},
+                       "request_id": {"type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$", "description": "Retry only: original request_id and exactly original arguments."}})
+    return {"name": name, "description": description,
+            "inputSchema": {"type": "object", "properties": fields,
+                            "required": list(required or []) + (["scene_version", "source_version"] if writes else []), "additionalProperties": False},
+            "annotations": {"readOnlyHint": not writes, "openWorldHint": False, "destructiveHint": writes}}
+
+
+path = {"type": "string", "pattern": r"^Assets/Scripts/[A-Za-z0-9][A-Za-z0-9_.\-/]*\.cs$", "maxLength": 256}
+entity = {"type": "string", "pattern": "^[1-9][0-9]*$"}
+WEB_TOOLS.extend([
+    script_tool("script_get_api", "Read verified TomCat C# APIs and a working movement example. Call before writing code; do not guess Unity APIs."),
+    script_tool("script_list", "List project C# files, stable asset handles, classes, source_version and scene_version."),
+    script_tool("script_read", "Read one C# source file and current versions.", {"path": path}, ["path"]),
+    script_tool("script_write", "Create or update one project C# file (at most 48 KiB), preserving its asset handle. Source edits are checkpointed, not scene-undoable. Refuses stale versions or an unsaved human draft.", {"path": path, "text": {"type": "string", "maxLength": 49152}}, ["path", "text"], True),
+    script_tool("script_compile", "Compile project scripts and return diagnostics. Check compilation.succeeded and restartRequired. When restartRequired is true, the user must rebuild via the C# panel before running updated code; never claim it is installed.", writes=True),
+    script_tool("script_attach", "Attach a saved script to an entity, preserving other attachments and fields. Idempotent for the same asset. Read entity_get to verify.", {"path": path, "entity_id": entity}, ["path", "entity_id"], True),
+    script_tool("script_detach", "Remove only the specified script attachment. Does not delete the source file. Get attachment_id from entity_get.script_attachments.", {"entity_id": entity, "attachment_id": entity}, ["entity_id", "attachment_id"], True),
+])
 BY_NAME = {tool["name"]: tool for tool in WEB_TOOLS}

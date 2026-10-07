@@ -17,6 +17,9 @@ async def test_schema_rejects_unsupported_and_unknown_arguments():
             assert (await client.call(name, {}))["error"]["code"] == "UNSUPPORTED_TOOL"
         assert (await client.call("entity_create", {"name": "Player", "projectId": "other"}))["error"]["code"] == "INVALID_ARGUMENT"
         assert (await client.call("entity_get", {"entity_id": 123}))["error"]["code"] == "INVALID_ARGUMENT"
+        assert (await client.call("script_write", {"path": "Assets/Scripts/Test.cs", "text": ""}))["error"]["code"] == "INVALID_ARGUMENT"
+        assert (await client.call("script_attach", {"entity_id": 123, "path": "Assets/Scripts/Test.cs", "scene_version": "1:3", "source_version": "hash"}))["error"]["code"] == "INVALID_ARGUMENT"
+        assert (await client.call("script_read", {"path": "Packages/private.cs"}))["error"]["code"] == "INVALID_ARGUMENT"
 
 
 async def test_unknown_outcome_has_stable_retry_id_and_no_automatic_retry():
@@ -46,7 +49,7 @@ async def test_revocation_is_not_reported_as_success():
 
 
 def test_capability_subset_and_installed_skill():
-    assert len(BY_NAME) == 16
+    assert len(BY_NAME) == 23
     assert not {"scene_save", "console_get_entries", "editor_step"} & BY_NAME.keys()
     assert "Query `component_get_schema`" in skill_instructions()
 

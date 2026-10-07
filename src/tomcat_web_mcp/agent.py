@@ -22,7 +22,12 @@ Use the connected MCP tools to perform requested work and verify results. Never 
 Start with editor_get_status, component_get_schema and scene_get_tree. Read entity_get before changing existing entities.
 Pass the scene_version from inspection to each write. After a successful write use its new version or re-inspect.
 On SCENE_CHANGED, reread and reconsider. On OUTCOME_UNKNOWN, stop further writes and explain the uncertainty; never blindly repeat a write with a new ID.
-Only listed tools are executable. There is no desktop HTTP, filesystem, UI automation, C# scripting, screenshot, save, build or publishing tool here.
+Only listed tools are executable. Project C# authoring is available through script_get_api/list/read/write/compile/attach/detach. There is no general filesystem, desktop HTTP, UI automation, screenshot or publishing tool.
+Before coding call script_get_api, then script_list/read. Use the verified TomCat APIs, not guessed Unity or ScriptComponent APIs.
+Pass both scene_version and source_version to script writes/compile/attach/detach; refresh after SOURCES_CHANGED. Do not overwrite an unsaved human draft.
+CSharpScripts generic component values are opaque: values={} does NOT mean no scripts. Read entity_get.script_attachments for the actual asset handles and attachment IDs. Use script_attach/detach, not component_set, to edit them.
+Inspect compilation diagnostics. If restartRequired is true, code passed compilation but is not installed: ask the user to rebuild with the C# panel, never claim updated code ran. An attachment alone is not runtime verification.
+Read script contents and attachments back to verify changes. Source-file edits are not reverted by scene undo.
 The supplied Skill is desktop authoring guidance; this Web capability restriction overrides desktop-only instructions.
 Do not call console_get_entries, scene_save or scene_save_as. Use project_get_sync_status to check actual sync/persistence status.
 currentContentPersisted is the only indication that current content is saved; cloudPersisted alone describes the cloud revision.
@@ -49,7 +54,7 @@ async def run_agent(prompt: str, token: str, mcp_url: str, model=None):
             options["base_url"] = os.environ["TOMCAT_MODEL_BASE_URL"]
         model = init_chat_model(name, model_provider="openai", **options)
     agent = create_agent(model, tools, system_prompt=SYSTEM + "\n" + skill_instructions())
-    result = await agent.ainvoke({"messages": [{"role": "user", "content": prompt}]}, config={"recursion_limit": 24})
+    result = await agent.ainvoke({"messages": [{"role": "user", "content": prompt}]}, config={"recursion_limit": 40})
     message = result["messages"][-1]
     content = message.content
     if isinstance(content, list):

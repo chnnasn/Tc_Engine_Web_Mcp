@@ -50,7 +50,7 @@ dotnet run --project TomCat.Api --no-launch-profile -- --urls http://127.0.0.1:5
 
 ## 兼容矩阵
 
-共享 Skills 定义 72 个工具，本服务通过明确的允许列表开放其中已实现的 15 个，并新增 Web 专用同步查询工具，共 16 个。上游新增工具不会自动公开；新增映射必须同时更新前端实现和契约测试：
+共享 Skills 定义 72 个工具，本服务通过明确的允许列表开放其中已实现的 15 个，并新增 Web 专用同步查询及 7 个脚本工具，共 23 个。上游新增工具不会自动公开；新增映射必须同时更新前端实现和契约测试：
 
 | 工具 | Web 映射 / 限制 |
 | --- | --- |
@@ -131,3 +131,11 @@ node tests/agent-browser.mjs
 ```
 
 浏览器验收需要已构建的真实 WASM、Chrome 和本仓库 `.venv`。`tests/agent_fixture.py` 只用于测试：通过确定性模型运行真实 LangChain 图和真实 HTTP MCP，再经后端、网页和 WASM 完成组件查询、实体创建、读回、撤销和再次验证；不会调用收费模型，也不能作为真实模型能力验收。真实模型端到端验收需要另行配置模型服务。
+
+### Web C# 工具
+
+`script_get_api` 提供当前浏览器引擎验证过的 API 与移动示例；`script_list/read/write/compile/attach/detach` 完成项目内源码与挂载操作。写工具要求 `scene_version` 和源码内容的 `source_version`，冲突需要重新读取，不能盲目重试。只允许 Assets/Scripts 下的 .cs 文件，AI 单次源码上限 48 KiB。通用 CSharpScripts 属性为空不表示没有脚本，应读取 `entity_get.script_attachments`。
+
+浏览器编译调用允许等待 120 秒；异步任务状态查询维持浏览器存活心跳。已加载程序集修改后 `restartRequired` 为真，需要用户通过 C# 面板重建会话，不能宣称新代码已经运行。字段元数据编辑仍受 Web 原生能力限制。
+
+前端的 `tests/agent-scripts-browser.mjs` 用确定性模型覆盖实际 MCP/后端/WASM 脚本流程与原生文件删除，不调用收费模型或改动线上项目。
