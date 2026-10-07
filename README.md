@@ -3,7 +3,7 @@
 LangChain Agent + TomCat Web MCP 服务。复用 `TomCat_Engine_Skills` 固定提交 `18edbfe28b81da28cc931507ac2b766d5ce6fbc0` 的工具 schema 与 `tomcat-editor` Skill，通过现有 .NET 后端驱动浏览器内真实 WASM 编辑器。
 
 ```text
-网页 AI 助手 → .NET /v1/editor-sessions/{id}/agent
+网页 AI 助手 → .NET /v1/editor-sessions/{id}/agent-runs（提交 + 查询）
              → Python LangChain create_agent
              → langchain-mcp-adapters / Streamable HTTP
              → WebEditorClient → .NET 会话命令队列
@@ -87,13 +87,13 @@ Web 界面在启动 Agent 前、正常响应后分别捕获完整项目，走已
 - 超时返回 OUTCOME_UNKNOWN，不能推断回滚。Agent 被要求停止继续写入并说明不确定性。不能用新 ID 盲目重复操作。
 - 写操作应携带读取时的 scene_version。浏览器在调用引擎前检查，引擎事务再次检查 baseRevision；冲突不自动覆盖。
 - 后端重启、页面退出、点击停止或任务取消会使旧会话失效。长期闲置会话在后续注册时清理；硬有效期两小时。
-- 最多 4 个会话/账号，256 个会话/后端，Python 最多 4 个并发 Agent。单请求最长 180 秒，LangChain recursion_limit=24，模型请求禁止自动重试。
+- 最多 4 个会话/账号，256 个会话/后端，Python 最多 4 个并发 Agent。后端通过私网等待单次 Agent 执行，浏览器通过短请求查询结果；单次执行最长 180 秒，LangChain recursion_limit=24，模型请求禁止自动重试。
 
 ## 部署边界
 
 后端与 Python 首版均运行单副本。后端会话队列保存在内存中；持久任务、跨进程队列、无人值守引擎 Worker 尚未实现。
 
-Python 默认仅监听 127.0.0.1。分容器部署可设置 `TOMCAT_HOST=0.0.0.0`、`PORT`，并正确配置三个服务地址；Python 和后端 `/internal/*` 应只允许私网访问，跨不可信网络必须使用 TLS。浏览器只访问同源 `/v1/*`，已有 Vite / Netlify 代理规则无需新增 WebSocket 配置。代理需允许 20 秒长轮询和最长约 190 秒的 Agent 请求；有较短固定超时的托管代理应改用独立任务 API 后再部署。
+Python 默认仅监听 127.0.0.1。分容器部署可设置 `TOMCAT_HOST=0.0.0.0`、`PORT`，并正确配置三个服务地址；Python 和后端 `/internal/*` 应只允许私网访问，跨不可信网络必须使用 TLS。浏览器只访问同源 `/v1/*`，已有 Vite / Netlify 代理规则无需新增 WebSocket 配置。浏览器代理只需支持最长 20 秒的命令长轮询；Agent 提交立即返回 202，结果通过短请求查询。后端到 Python 的私网调用最长约 190 秒。
 
 ## 验证
 
@@ -113,11 +113,11 @@ Python 默认仅监听 127.0.0.1。分容器部署可设置 `TOMCAT_HOST=0.0.0.0
 | `TOMCAT_MCP_URL` | `http://127.0.0.1:8080/mcp/` |
 | `TOMCAT_AGENT_SECRET` | Railway 变量中生成并保存的至少 32 字符随机密钥 |
 
-当前部署仅启用私网 MCP；不生成公网域名。内部地址为 `http://tcenginewebmcp.railway.internal:8080/mcp/`，调用仍须携带后端签发的编辑器会话 Bearer 凭证，服务密钥不能代替会话凭证。
+MCP 通过私网供后端访问；不生成公网域名。内部地址为 `http://tcenginewebmcp.railway.internal:8080/mcp/`，调用仍须携带后端签发的编辑器会话 Bearer 凭证，服务密钥不能代替会话凭证。
 
 未设置模型时 `/health` 返回 `modelConfigured: false`，MCP 工具仍然存在，但 AI Agent 请求返回明确的 503。后续启用网页 AI 助手时再配置 `TOMCAT_MODEL`、`TOMCAT_MODEL_API_KEY`、可选的 `TOMCAT_MODEL_BASE_URL`，并在后端设置 `Agent__Url=http://tcenginewebmcp.railway.internal:8080`、`Agent__Secret` 为相同服务密钥。密钥不要写入仓库。
 
-网页 AI 请求最长 180 秒，而 Netlify 代理重写限制为 26 秒。正式启用前应先将网页 Agent 调用改为异步任务提交及状态查询，避免长请求中断。当前部署不启用模型或更改后端 Agent 配置。
+网页已经使用异步任务提交及状态查询；最长 180 秒的模型调用只经过后端与 MCP 的私网连接，不占用 Netlify 长请求。任务状态及编辑器会话仍保存在后端进程内，服务重启不会自动恢复任务。
 
 ```powershell
 uv run --locked --extra test pytest -q
