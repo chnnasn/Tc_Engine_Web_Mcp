@@ -3,6 +3,9 @@ import pytest
 from tomcat_web_mcp.client import WebEditorClient
 from tomcat_web_mcp.catalog import BY_NAME
 from tomcat_web_mcp.agent import skill_instructions
+from pathlib import Path
+import re
+from tomcat_skills.tools import BY_NAME as UPSTREAM_TOOLS
 
 
 async def test_schema_rejects_unsupported_and_unknown_arguments():
@@ -10,7 +13,8 @@ async def test_schema_rejects_unsupported_and_unknown_arguments():
         pytest.fail("Invalid tools must not reach the broker")
     async with httpx.AsyncClient(transport=httpx.MockTransport(unexpected)) as http:
         client = WebEditorClient(http, "http://backend", "secret")
-        assert (await client.call("scene_save", {}))["error"]["code"] == "UNSUPPORTED_TOOL"
+        for name in UPSTREAM_TOOLS.keys() - BY_NAME.keys():
+            assert (await client.call(name, {}))["error"]["code"] == "UNSUPPORTED_TOOL"
         assert (await client.call("entity_create", {"name": "Player", "projectId": "other"}))["error"]["code"] == "INVALID_ARGUMENT"
         assert (await client.call("entity_get", {"entity_id": 123}))["error"]["code"] == "INVALID_ARGUMENT"
 
@@ -45,3 +49,13 @@ def test_capability_subset_and_installed_skill():
     assert len(BY_NAME) == 16
     assert not {"scene_save", "console_get_entries", "editor_step"} & BY_NAME.keys()
     assert "Query `component_get_schema`" in skill_instructions()
+
+
+def test_catalog_matches_browser_capabilities():
+    frontend = Path(__file__).resolve().parents[2] / "Tc_Engine_Web_Front/src/engine/automation.ts"
+    source = frontend.read_text(encoding="utf-8")
+    declaration = re.search(r"export const supportedTools = \[(.*?)\] as const", source, re.S)
+    assert declaration is not None
+    assert set(re.findall(r"'([^']+)'", declaration.group(1))) == BY_NAME.keys()
+    # The upgraded package must contain workflow schemas, without exposing them on Web.
+    assert {"project_create", "runtime_start", "build_player", "scene_save_as"} <= UPSTREAM_TOOLS.keys()

@@ -1,9 +1,15 @@
 from copy import deepcopy
-from tomcat_skills.tools import TOOLS
+from tomcat_skills.tools import BY_NAME as UPSTREAM_TOOLS
 
 # Do not advertise capabilities that the Web host cannot execute with the same semantics.
-UNSUPPORTED = {"scene_save", "console_get_entries", "editor_step"}
-WEB_TOOLS = [deepcopy(tool) for tool in TOOLS if tool["name"] not in UNSUPPORTED]
+SUPPORTED = (
+    "editor_get_status", "scene_get_tree", "entity_get", "component_get_schema",
+    "entity_create", "entity_delete", "entity_reparent", "component_add",
+    "component_remove", "component_set", "editor_play", "editor_pause",
+    "editor_stop", "history_undo", "history_redo",
+)
+# Explicit lookup also fails at startup if an upstream upgrade removes a required schema.
+WEB_TOOLS = [deepcopy(UPSTREAM_TOOLS[name]) for name in SUPPORTED]
 for tool in WEB_TOOLS:
     properties = tool["inputSchema"]["properties"]
     if "request_id" in properties:

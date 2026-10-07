@@ -24,7 +24,7 @@ Pass the scene_version from inspection to each write. After a successful write u
 On SCENE_CHANGED, reread and reconsider. On OUTCOME_UNKNOWN, stop further writes and explain the uncertainty; never blindly repeat a write with a new ID.
 Only listed tools are executable. There is no desktop HTTP, filesystem, UI automation, C# scripting, screenshot, save, build or publishing tool here.
 The supplied Skill is desktop authoring guidance; this Web capability restriction overrides desktop-only instructions.
-Do not call console_get_entries or scene_save. Use project_get_sync_status to check actual sync/persistence status.
+Do not call console_get_entries, scene_save or scene_save_as. Use project_get_sync_status to check actual sync/persistence status.
 currentContentPersisted is the only indication that current content is saved; cloudPersisted alone describes the cloud revision.
 The Web task runner saves a start checkpoint before your run and an end checkpoint after normal completion, outside the model loop.
 Do not claim that the end checkpoint exists: it is created after your response. If you started Play, stop it after verification so the authoring scene can be checkpointed.

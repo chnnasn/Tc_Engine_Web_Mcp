@@ -1,6 +1,6 @@
 # Tc_Engine_Web_Mcp
 
-LangChain Agent + TomCat Web MCP 服务。复用 `TomCat_Engine_Skills` 固定提交 `484f8d81c78724aa13d070a50ac7729e62e33708` 的工具 schema 与 `tomcat-editor` Skill，通过现有 .NET 后端驱动浏览器内真实 WASM 编辑器。
+LangChain Agent + TomCat Web MCP 服务。复用 `TomCat_Engine_Skills` 固定提交 `18edbfe28b81da28cc931507ac2b766d5ce6fbc0` 的工具 schema 与 `tomcat-editor` Skill，通过现有 .NET 后端驱动浏览器内真实 WASM 编辑器。
 
 ```text
 网页 AI 助手 → .NET /v1/editor-sessions/{id}/agent
@@ -50,7 +50,7 @@ dotnet run --project TomCat.Api --no-launch-profile -- --urls http://127.0.0.1:5
 
 ## 兼容矩阵
 
-共享 Skills 定义 18 个工具，本服务开放其中 15 个，并新增 Web 专用同步查询工具，共 16 个：
+共享 Skills 定义 72 个工具，本服务通过明确的允许列表开放其中已实现的 15 个，并新增 Web 专用同步查询工具，共 16 个。上游新增工具不会自动公开；新增映射必须同时更新前端实现和契约测试：
 
 | 工具 | Web 映射 / 限制 |
 | --- | --- |
@@ -68,7 +68,7 @@ dotnet run --project TomCat.Api --no-launch-profile -- --urls http://127.0.0.1:5
 | console_get_entries | 未开放：Web 尚无对应诊断接口 |
 | editor_step | 未开放：尚未证明 Web Step 与桌面固定 1/60 秒契约一致 |
 
-工具名称和输入字段复用；返回数据是 Web 结构，例如 `entity.id`、`schemas`、`scene_version`。`scene_version` 是不可解析的字符串，包含场景 Handle 与 revision；它不同于云端修订 ETag，也不是桌面协议版本。Skills 仅加载发现与编辑验证章节，并用 Web 约束覆盖桌面路径、Save As 和 Console 指令。其他 7 个 UI/源码 Skill 暂未加入 Agent，因为尚无相应执行能力。
+工具名称和输入字段复用；返回数据是 Web 结构，例如 `entity.id`、`schemas`、`scene_version`。`scene_version` 是不可解析的字符串，包含场景 Handle 与 revision；它不同于云端修订 ETag，也不是桌面协议版本。Skills 仅加载发现与编辑验证章节，并用 Web 约束覆盖桌面路径、Save As 和 Console 指令。其他 Skill 暂未加入 Agent，因为尚无相应执行能力。新版原生 `project_create`、`runtime_start`、`build_player`、存档与资产等工具没有浏览器映射，不会公开。
 
 ## 会话、授权与重试
 

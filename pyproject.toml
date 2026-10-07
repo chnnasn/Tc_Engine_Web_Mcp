@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "LangChain agent and session-scoped MCP adapter for TomCat Web"
 requires-python = ">=3.11"
 dependencies = [
-  "tomcat-engine-skills @ git+https://github.com/chnnasn/TomCat_Engine_Skills.git@484f8d81c78724aa13d070a50ac7729e62e33708",
+  "tomcat-engine-skills @ git+https://github.com/chnnasn/TomCat_Engine_Skills.git@18edbfe28b81da28cc931507ac2b766d5ce6fbc0",
   "mcp==1.26.0",
   "langchain>=1.2,<1.3",
   "langchain-mcp-adapters>=0.2,<0.3",
