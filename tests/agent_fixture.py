@@ -28,6 +28,13 @@ class ScriptedModel(BaseChatModel):
         return self
 
     def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        humans = [m for m in messages if isinstance(m, HumanMessage)]
+        if humans[-1].content == "HISTORY_RECALL":
+            assert len(humans) >= 2, "Conversation history was not passed to the model"
+            return ChatResult(generations=[ChatGeneration(message=AIMessage(content="HISTORY_OK: " + humans[0].content))])
+        if humans[-1].content == "HISTORY_EMPTY":
+            assert len(humans) == 1, "Another conversation leaked into the new session"
+            return ChatResult(generations=[ChatGeneration(message=AIMessage(content="EMPTY_OK"))])
         replies = [m for m in messages if isinstance(m, ToolMessage)]
         for reply in replies:
             if not payload(reply).get("ok"):
@@ -86,8 +93,8 @@ class ScriptedModel(BaseChatModel):
         return ChatResult(generations=[ChatGeneration(message=AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": f"script-{count}"}]))])
 
 
-async def scripted_runner(prompt, token, mcp_url):
-    return await run_agent(prompt, token, mcp_url, model=ScriptedModel())
+async def scripted_runner(prompt, token, mcp_url, history=None):
+    return await run_agent(prompt, token, mcp_url, model=ScriptedModel(), history=history)
 
 
 if __name__ == "__main__":

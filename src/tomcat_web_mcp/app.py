@@ -70,12 +70,24 @@ def create_app(backend_url=None, service_secret=None, mcp_url=None, runner=run_a
         raw = bytearray()
         async for chunk in request.stream():
             raw.extend(chunk)
-            if len(raw) > 40000:
+            if len(raw) > 512000:
                 return JSONResponse({"error": "Request too large"}, status_code=413)
         try:
             body = json.loads(raw)
             prompt, token = body["prompt"], body["sessionToken"]
             if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= 8000 or not isinstance(token, str) or len(token) != 64:
+                raise ValueError()
+            history = body.get("history", [])
+            if not isinstance(history, list) or len(history) > 40 or len(history) % 2:
+                raise ValueError()
+            total = 0
+            for index, message in enumerate(history):
+                if (not isinstance(message, dict) or set(message) != {"role", "content"}
+                    or message["role"] != ("user" if index % 2 == 0 else "assistant")
+                    or not isinstance(message["content"], str) or len(message["content"]) > 16000):
+                    raise ValueError()
+                total += len(message["content"])
+            if total > 64000:
                 raise ValueError()
         except (ValueError, KeyError, TypeError):
             return JSONResponse({"error": "Invalid request"}, status_code=400)
@@ -88,7 +100,7 @@ def create_app(backend_url=None, service_secret=None, mcp_url=None, runner=run_a
         if token in active or len(active) >= 4:
             return JSONResponse({"error": "Agent busy"}, status_code=429)
         active.add(token)
-        task = asyncio.create_task(runner(prompt, token, mcp_url))
+        task = asyncio.create_task(runner(prompt, token, mcp_url, history=history))
         try:
             async with asyncio.timeout(180):
                 while not task.done():

@@ -117,7 +117,9 @@ MCP 通过私网供后端访问；不生成公网域名。内部地址为 `http:
 
 未设置模型时 `/health` 返回 `modelConfigured: false`，MCP 工具仍然存在，但 AI Agent 请求返回明确的 503。后续启用网页 AI 助手时再配置 `TOMCAT_MODEL`、`TOMCAT_MODEL_API_KEY`、可选的 `TOMCAT_MODEL_BASE_URL`，并在后端设置 `Agent__Url=http://tcenginewebmcp.railway.internal:8080`、`Agent__Secret` 为相同服务密钥。密钥不要写入仓库。
 
-网页已经使用异步任务提交及状态查询；最长 180 秒的模型调用只经过后端与 MCP 的私网连接，不占用 Netlify 长请求。任务状态及编辑器会话仍保存在后端进程内，服务重启不会自动恢复任务。
+网页已经使用异步任务提交及状态查询；最长 180 秒的模型调用只经过后端与 MCP 的私网连接，不占用 Netlify 长请求。对话及任务结果按项目/sessionId 保存在后端 SQLite 中；临时工具连接仍是进程内状态，服务重启不会自动重放任务。
+
+后端传入经过账号和项目归属校验的 `history`（至多 40 条交替 user/assistant 消息）；Agent 将其与当前输入组成模型上下文。MCP 不接受来自历史的 system/tool 消息，不存储或跨会话共用模型上下文。旧场景版本和实体 ID 只作参考，每次任务仍重新读取实时场景。网页可在同一项目中新建和切换独立对话。
 
 ```powershell
 uv run --locked --extra test pytest -q
