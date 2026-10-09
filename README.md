@@ -141,3 +141,5 @@ node tests/agent-browser.mjs
 浏览器编译调用允许等待 120 秒；异步任务状态查询维持浏览器存活心跳。已加载程序集修改后 `restartRequired` 为真，需要用户通过 C# 面板重建会话，不能宣称新代码已经运行。字段元数据编辑仍受 Web 原生能力限制。
 
 前端的 `tests/agent-scripts-browser.mjs` 用确定性模型覆盖实际 MCP/后端/WASM 脚本流程与原生文件删除，不调用收费模型或改动线上项目。
+
+MCP 工具的 `isError` 响应作为失败的 ToolMessage 交回模型，保留错误码及 request_id，供检查冲突或修正参数；不会由传输层自动重试写入。日志只记录工具名和错误码。`tests/test_agent_errors.py` 覆盖 SCENE_CHANGED、INVALID_ARGUMENT 和 OUTCOME_UNKNOWN。

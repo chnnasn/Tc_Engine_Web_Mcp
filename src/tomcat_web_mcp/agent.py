@@ -44,6 +44,11 @@ async def run_agent(prompt: str, token: str, mcp_url: str, model=None, history=N
     client = MultiServerMCPClient({"tomcat": {"transport": "http", "url": mcp_url,
         "headers": {"Authorization": f"Bearer {token}"}}})
     tools = await client.get_tools()
+    # MCP isError replies are ToolExceptions in the adapter. Feed them back to
+    # the model as failed observations so it can inspect conflicts/arguments;
+    # never retry a write automatically or turn a failure into success.
+    for tool in tools:
+        tool.handle_tool_error = True
     if model is None:
         name = os.environ.get("TOMCAT_MODEL")
         if not name:

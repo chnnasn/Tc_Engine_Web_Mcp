@@ -39,6 +39,8 @@ def create_app(backend_url=None, service_secret=None, mcp_url=None, runner=run_a
     async def call_tool(name, arguments):
         client = WebEditorClient(http, backend_url, credential.get())
         result = await client.call(name, arguments)
+        if not result["ok"]:
+            logging.getLogger(__name__).warning("Editor tool %s failed (%s)", name, result.get("error", {}).get("code", "UNKNOWN"))
         return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))],
             structuredContent=result, isError=not result["ok"])
 
