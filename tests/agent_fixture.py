@@ -73,7 +73,8 @@ class ScriptedModel(BaseChatModel):
         elif count == 5:
             name, args = "script_list", {}
         elif count == 6:
-            source = data[4]["example"].replace("    public float Speed", '    protected override void OnCreate() { Log.Info("AI_SCRIPT_CREATED"); }\n    public float Speed')
+            assert data[4]["base_class"] == "MonoBehaviour" and data[4]["managed_api"] == 6
+            source = data[4]["example"].replace("    public float Speed", '    private void Awake() { Log.Info("AI_SCRIPT_CREATED"); }\n    public float Speed')
             source = source.replace("        Transform.Position = position;", '        Transform.Position = position;\n        if (axis != 0f) Log.Info("AI_SCRIPT_MOVE:" + position.X);')
             name, args = "script_write", {"path": "Assets/Scripts/PlayerMovement.cs", "text": source, "scene_version": data[-1]["scene_version"], "source_version": data[-1]["source_version"]}
         elif count == 7:
