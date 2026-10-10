@@ -49,7 +49,7 @@ async def test_revocation_is_not_reported_as_success():
 
 
 def test_capability_subset_and_installed_skill():
-    assert len(BY_NAME) == 23
+    assert len(BY_NAME) == 31
     assert not {"scene_save", "console_get_entries", "editor_step"} & BY_NAME.keys()
     assert "Query `component_get_schema`" in skill_instructions()
 
@@ -59,6 +59,12 @@ def test_catalog_matches_browser_capabilities():
     source = frontend.read_text(encoding="utf-8")
     declaration = re.search(r"export const supportedTools = \[(.*?)\] as const", source, re.S)
     assert declaration is not None
-    assert set(re.findall(r"'([^']+)'", declaration.group(1))) == BY_NAME.keys()
+    server_tools = {"project_knowledge_list", "project_knowledge_save"}
+    gateways = {"capability_search", "capability_describe", "capability_invoke"}
+    browser_tools = set(re.findall(r"'([^']+)'", declaration.group(1)))
+    assert browser_tools | server_tools | gateways == BY_NAME.keys()
+    backend = frontend.parents[3] / "Tc_Engine_Web_backend/TomCat.Api/EditorSessions.cs"
+    allowed = re.search(r"HashSet<string> Tools = \[(.*?)\];", backend.read_text(encoding="utf-8"), re.S)
+    assert set(re.findall(r'"([^"]+)"', allowed.group(1))) == browser_tools | server_tools
     # The upgraded package must contain workflow schemas, without exposing them on Web.
     assert {"project_create", "runtime_start", "build_player", "scene_save_as"} <= UPSTREAM_TOOLS.keys()

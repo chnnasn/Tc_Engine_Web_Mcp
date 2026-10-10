@@ -42,4 +42,6 @@ WEB_TOOLS.extend([
     script_tool("script_attach", "Attach a saved script to an entity, preserving other attachments and fields. Idempotent for the same asset. Read entity_get to verify.", {"path": path, "entity_id": entity}, ["path", "entity_id"], True),
     script_tool("script_detach", "Remove only the specified script attachment. Does not delete the source file. Get attachment_id from entity_get.script_attachments.", {"entity_id": entity, "attachment_id": entity}, ["entity_id", "attachment_id"], True),
 ])
+from .workspace_catalog import WORKSPACE_TOOLS, DISCOVERY_TOOLS
+WEB_TOOLS.extend(WORKSPACE_TOOLS + DISCOVERY_TOOLS)
 BY_NAME = {tool["name"]: tool for tool in WEB_TOOLS}

@@ -6,7 +6,7 @@ SECRET = "test-service-secret-01234567890123456789"
 
 def test_agent_and_mcp_reject_missing_credentials_and_browser_origin():
     with TestClient(create_app(service_secret=SECRET)) as client:
-        assert client.get('/health').json()['tools'] == 23
+        assert client.get('/health').json()['tools'] == 31
         assert client.post('/agent/run', json={}).status_code == 401
         assert client.post('/agent/run', json={}, headers={'Authorization': f'Bearer {SECRET}', 'Origin': 'https://evil.example'}).status_code == 401
         assert client.post('/mcp/', json={}).status_code == 401

@@ -50,7 +50,7 @@ dotnet run --project TomCat.Api --no-launch-profile -- --urls http://127.0.0.1:5
 
 ## 兼容矩阵
 
-共享 Skills 定义 72 个工具，本服务通过明确的允许列表开放其中已实现的 15 个，并新增 Web 专用同步查询及 7 个脚本工具，共 23 个。上游新增工具不会自动公开；新增映射必须同时更新前端实现和契约测试：
+共享 Skills 定义 72 个工具，本服务通过明确的允许列表开放其中已实现的 15 个。加上同步查询、7 个脚本工具、3 个场景改造工具、2 个项目知识工具和 3 个能力发现工具，共 31 个：26 个由浏览器执行，2 个在后端执行，3 个在 Python 本地分发。上游新增工具不会自动公开；新增映射必须同时更新实现和契约测试：
 
 | 工具 | Web 映射 / 限制 |
 | --- | --- |
@@ -66,9 +66,20 @@ dotnet run --project TomCat.Api --no-launch-profile -- --urls http://127.0.0.1:5
 | history_undo / history_redo | 原生历史事务，可能包含人工编辑 |
 | scene_save | 未开放：桌面已有路径保存与 Web 完整项目保存语义不同 |
 | console_get_entries | 未开放：Web 尚无对应诊断接口 |
-| editor_step | 未开放：尚未证明 Web Step 与桌面固定 1/60 秒契约一致 |
+| scene_apply_patch | 1–128 条操作组成单个原生事务，版本冲突或校验失败不提交，返回语义差异 |
+| scene_get_diff | 本次任务第一次场景观察到当前的实体、组件、属性差异，可能包含人工修改 |
+| runtime_validate | 1–600 个固定 1/60 秒步骤，采样运行时世界位置，检查最终区间和可选稳定性；结束后停止预览 |
+| project_knowledge_list / project_knowledge_save | 后端持久笔记，版本冲突保护，保留来源任务，内容始终作为未验证的项目数据 |
+| capability_search / capability_describe / capability_invoke | 查找允许列表中的能力、读取 schema、按版本 1 调用；禁止任意 RPC 和递归调用网关 |
+| editor_step | 未单独开放；使用有步数限制和结果检查的 runtime_validate |
 
 工具名称和输入字段复用；返回数据是 Web 结构，例如 `entity.id`、`schemas`、`scene_version`。`scene_version` 是不可解析的字符串，包含场景 Handle 与 revision；它不同于云端修订 ETag，也不是桌面协议版本。Skills 仅加载发现与编辑验证章节，并用 Web 约束覆盖桌面路径、Save As 和 Console 指令。其他 Skill 暂未加入 Agent，因为尚无相应执行能力。新版原生 `project_create`、`runtime_start`、`build_player`、存档与资产等工具没有浏览器映射，不会公开。
+
+新增能力来自 `workspace_catalog.py`；现有 MCP 工具仍可直接调用。`capability_invoke` 再次校验实际目标 schema，`request_id` 必须放在嵌套 `arguments` 内并在重试时保留。发现采用名称和意图关键词匹配，并非语义向量检索；当前仍提供完整工具列表，不宣称已降低模型上下文消耗。
+
+物理验收的 `ok: true` 仅说明工具成功执行，必须另读 `data.passed`。验收条件应事先确定，失败不得通过放宽条件伪造成功。检查只覆盖采样位置和末尾三个样本的稳定性，不证明脚本无异常、连续碰撞或游戏体验。项目知识最多 100 条、单条 4000 字符；新建 `expected_version=0`，修改前重读版本，笔记中的内容不能作为系统指令。
+
+前端“项目工具”提供独立完整项目副本；“执行证据与变更”读取后端 SQLite 工具记录。发现本身在 Python 内运行，持久记录对应实际后端调用；大结果会明确截断。记录和项目检查点可复查，但不支持任务断点续跑。三项服务需要一起更新，后端自动应用迁移 007，上游引擎无需修改。
 
 ## 会话、授权与重试
 
